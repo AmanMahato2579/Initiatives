@@ -4,7 +4,7 @@ from contextlib import contextmanager
 # Database file paths
 TASKS_DB_PATH = 'tasks.db'
 NOTES_DB_PATH = 'notes.db'
-EXPENSES_DB_PATH = 'expenses.db'
+EXPENSES_DB_PATH = 'Initiatives\services\expenses\expenses.db'
 GOALS_DB_PATH = 'goals.db'
 JOURNAL_DB_PATH = 'journal.db'
 
@@ -137,80 +137,153 @@ def update_note(note_id, new_content):
     execute_query(NOTES_DB_PATH, query, (new_content, note_id), commit=True)
 
 # Expense Tracking
-def create_expenses_table():
-    """Create the expenses table."""
-    query = """
-    CREATE TABLE IF NOT EXISTS expenses (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        description TEXT NOT NULL,
-        amount REAL NOT NULL,
-        date TEXT NOT NULL
-    )
-    """
-    execute_query(EXPENSES_DB_PATH, query, commit=True)
+import sqlite3
+from datetime import datetime
 
-def add_expense(description, amount, date):
-    """Add a new expense."""
-    query = 'INSERT INTO expenses (description, amount, date) VALUES (?, ?, ?)'
-    execute_query(EXPENSES_DB_PATH, query, (description, amount, date), commit=True)
+def connect():
+    return sqlite3.connect('expenses.db')
 
-def get_expenses():
-    """Retrieve all expenses."""
-    query = 'SELECT * FROM expenses'
-    return fetch_query(EXPENSES_DB_PATH, query)
+def create_tables():
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute('''
+        CREATE TABLE IF NOT EXISTS expenses (
+            id INTEGER PRIMARY KEY AUTOINCREMENT,
+            description TEXT,
+            amount REAL,
+            type TEXT,
+            date TEXT,
+            month INTEGER,
+            year INTEGER
+        )
+    ''')
+    conn.commit()
+    conn.close()
+
+def add_expense(description, amount, type, date, month, year):
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute('''
+        INSERT INTO expenses (description, amount, type, date, month, year)
+        VALUES (?, ?, ?, ?, ?, ?)
+    ''', (description, amount, type, date, month, year))
+    conn.commit()
+    conn.close()
+
+def get_expenses(month, year):
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT * FROM expenses WHERE month = ? AND year = ?
+    ''', (month, year))
+    rows = cur.fetchall()
+    conn.close()
+    return rows
+
+def get_expenses_total(month, year):
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT SUM(amount) FROM expenses WHERE month = ? AND year = ? AND type = 'credit'
+    ''', (month, year))
+    credit_total = cur.fetchone()[0] or 0
+
+    cur.execute('''
+        SELECT SUM(amount) FROM expenses WHERE month = ? AND year = ? AND type = 'debit'
+    ''', (month, year))
+    debit_total = cur.fetchone()[0] or 0
+
+    conn.close()
+    return credit_total - debit_total
 
 def delete_expense(expense_id):
-    """Delete an expense by ID."""
-    query = 'DELETE FROM expenses WHERE id = ?'
-    execute_query(EXPENSES_DB_PATH, query, (expense_id,), commit=True)
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute('''
+        DELETE FROM expenses WHERE id = ?
+    ''', (expense_id,))
+    conn.commit()
+    conn.close()
+
+def update_expense(expense_id, description, amount, type, date):
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute('''
+        UPDATE expenses
+        SET description = ?, amount = ?, type = ?, date = ?
+        WHERE id = ?
+    ''', (description, amount, type, date, expense_id))
+    conn.commit()
+    conn.close()
+
+def get_expense_by_id(expense_id):
+    conn = connect()
+    cur = conn.cursor()
+    cur.execute('''
+        SELECT description, amount, type, date FROM expenses WHERE id = ?
+    ''', (expense_id,))
+    expense = cur.fetchone()
+    conn.close()
+    return expense
 
 # Goals Setting
-def create_goals_table():
-    """Create the goals table."""
-    query = """
-    CREATE TABLE IF NOT EXISTS goals (
-        id INTEGER PRIMARY KEY AUTOINCREMENT,
-        goal TEXT NOT NULL,
-        details TEXT NOT NULL,
-        status INTEGER DEFAULT 0
-    )
-    """
-    execute_query(GOALS_DB_PATH, query, commit=True)
+import sqlite3
 
-def add_goal(goal, details):
-    """Add a new goal."""
-    query = 'INSERT INTO goals (goal, details) VALUES (?, ?)'
-    execute_query(GOALS_DB_PATH, query, (goal, details), commit=True)
+def create_tables():
+    with sqlite3.connect("goals.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS goals (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                goal TEXT NOT NULL,
+                details TEXT NOT NULL,
+                deadline DATE NOT NULL,
+                completed INTEGER NOT NULL DEFAULT 0
+            )
+        """)
+        conn.commit()
+
+def add_goal(goal, details, deadline):
+    with sqlite3.connect("goals.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("INSERT INTO goals (goal, details, deadline) VALUES (?, ?, ?)", (goal, details, deadline))
+        conn.commit()
 
 def get_goals():
-    """Retrieve all goals."""
-    query = 'SELECT * FROM goals'
-    return fetch_query(GOALS_DB_PATH, query)
+    with sqlite3.connect("goals.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, goal, details, deadline, completed FROM goals WHERE completed = 0")
+        return cursor.fetchall()
 
-def update_goal(goal_id, new_goal, new_details):
-    """Update an existing goal."""
-    query = 'UPDATE goals SET goal = ?, details = ? WHERE id = ?'
-    execute_query(GOALS_DB_PATH, query, (new_goal, new_details, goal_id), commit=True)
-
-def delete_goal(goal_id):
-    """Delete a goal by ID."""
-    query = 'DELETE FROM goals WHERE id = ?'
-    execute_query(GOALS_DB_PATH, query, (goal_id,), commit=True)
+def get_completed_tasks():
+    with sqlite3.connect("goals.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT id, goal, details, deadline, completed FROM goals WHERE completed = 1")
+        return cursor.fetchall()
 
 def get_goal_by_id(goal_id):
-    """Retrieve a goal by its ID."""
-    query = 'SELECT goal, details FROM goals WHERE id = ?'
-    return fetch_query(GOALS_DB_PATH, query, (goal_id,))
+    with sqlite3.connect("goals.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("SELECT goal, details, deadline, completed FROM goals WHERE id = ?", (goal_id,))
+        return cursor.fetchone()
 
-def get_completed_goals():
-    """Retrieve all completed goals."""
-    query = 'SELECT * FROM goals WHERE status = 1'
-    return fetch_query(GOALS_DB_PATH, query)
+def update_goal(goal_id, new_goal, new_details, new_deadline):
+    with sqlite3.connect("goals.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE goals SET goal = ?, details = ?, deadline = ? WHERE id = ?", (new_goal, new_details, new_deadline, goal_id))
+        conn.commit()
 
-def update_goal_status(goal_id, new_status):
-    """Update the status of a goal."""
-    query = 'UPDATE goals SET status = ? WHERE id = ?'
-    execute_query(GOALS_DB_PATH, query, (new_status, goal_id), commit=True)
+def delete_goal(goal_id):
+    with sqlite3.connect("goals.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("DELETE FROM goals WHERE id = ?", (goal_id,))
+        conn.commit()
+
+def update_goal_status(goal_id, status):
+    with sqlite3.connect("goals.db") as conn:
+        cursor = conn.cursor()
+        cursor.execute("UPDATE goals SET completed = ? WHERE id = ?", (status, goal_id))
+        conn.commit()
 
 # Daily Journaling
 def create_journal_table():

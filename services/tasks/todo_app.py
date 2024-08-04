@@ -1,8 +1,9 @@
+
 import datetime
 import tkinter as tk
 from tkinter import messagebox, simpledialog, ttk
 from tkcalendar import DateEntry
-from database import add_task, get_tasks, update_task, delete_task, get_task_by_id, get_completed_tasks, get_missed_tasks
+from main import database  # Corrected import path
 
 class TODOApp:
     def __init__(self, root):
@@ -100,7 +101,7 @@ class TODOApp:
         if not name or not priority:
             messagebox.showwarning("Input Error", "Please fill in all fields")
             return
-        add_task(name, priority, deadline, notes)
+        database.add_task(name, priority, deadline, notes)
         self.load_tasks()
         self.clear_task_inputs()
 
@@ -115,9 +116,9 @@ class TODOApp:
         self.completed_tasks_listbox.delete(0, tk.END)
         self.missed_tasks_listbox.delete(0, tk.END)
 
-        incomplete_tasks = get_tasks(status=0)
-        completed_tasks = get_completed_tasks()
-        missed_tasks = get_missed_tasks()
+        incomplete_tasks = database.get_tasks(status=0)
+        completed_tasks = database.get_completed_tasks()
+        missed_tasks = database.get_missed_tasks()
 
         for task in incomplete_tasks:
             self.incomplete_tasks_listbox.insert(tk.END, f"{task[0]} | {task[1]} | {task[2]} | {task[3]}")
@@ -142,9 +143,10 @@ class TODOApp:
             messagebox.showerror("Error", "Task details not found")
             return
 
-        task = get_task_by_id(task_id)
+        task = database.get_task_by_id(task_id)
         if len(task) >= 4:
             task_details = f"Task Name: {task[0]}\nPriority: {task[1]}\nDeadline: {task[2]}\nNotes: {task[3]}"
+            messagebox.showinfo("Task Details", task_details)
         else:
             messagebox.showerror("Error", "Task details not found")
 
@@ -168,14 +170,14 @@ class TODOApp:
             messagebox.showerror("Error", "Task details not found")
             return
 
-        task = get_task_by_id(task_id)
+        task = database.get_task_by_id(task_id)
         if task:
             new_name = simpledialog.askstring("Edit Task", "Enter new task name:", initialvalue=task[0])
             new_priority = simpledialog.askstring("Edit Task", "Enter new priority:", initialvalue=task[1])
             new_deadline = simpledialog.askstring("Edit Task", "Enter new deadline (dd/mm/yyyy):", initialvalue=task[2])
             new_notes = simpledialog.askstring("Edit Task", "Enter new notes:", initialvalue=task[3])
             if new_name and new_priority and new_deadline and new_notes:
-                update_task(task_id, new_name, new_priority, new_deadline, new_notes)
+                database.update_task(task_id, new_name, new_priority, new_deadline, new_notes)
                 self.load_tasks()
             else:
                 messagebox.showwarning("Input Error", "Please fill in all fields")
@@ -193,7 +195,7 @@ class TODOApp:
             messagebox.showerror("Error", "Task details not found")
             return
 
-        update_task(task_id, status=1)
+        database.update_task(task_id, status=1)
         self.load_tasks()
 
     def mark_as_missed(self):
@@ -209,7 +211,7 @@ class TODOApp:
             messagebox.showerror("Error", "Task details not found")
             return
 
-        update_task(task_id, status=2)
+        database.update_task(task_id, status=2)
         self.load_tasks()
 
     def add_again(self):
@@ -225,26 +227,28 @@ class TODOApp:
             messagebox.showerror("Error", "Task details not found")
             return
 
-        task = get_task_by_id(task_id)
+        task = database.get_task_by_id(task_id)
         if task:
             name = task[0]
             priority = task[1]
             deadline = task[2]
             notes = task[3]
-            add_task(name, priority, deadline, notes)
-            update_task(task_id, status=0)
+            database.add_task(name, priority, deadline, notes)
+            database.update_task(task_id, status=0)
             self.load_tasks()
         else:
             messagebox.showerror("Error", "Task details not found")
 
     def clear_completed_tasks(self):
         self.completed_tasks_listbox.delete(0, tk.END)
-        # Clear the database or any storage where completed tasks are kept if necessary
+        # Optionally clear the database or any storage where completed tasks are kept if necessary
+        database.clear_completed_tasks()
 
     def update_clock(self):
         now = datetime.datetime.now().strftime("%H:%M:%S")
         self.clock_label.config(text=now)
         self.root.after(1000, self.update_clock)  # Update the clock every second
+
 
 if __name__ == "__main__":
     root = tk.Tk()
