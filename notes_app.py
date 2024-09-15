@@ -57,7 +57,7 @@ class NotesApp:
             messagebox.showwarning("Input Error", "Please fill in all fields")
             return
         task_id = 1  # Example task_id, replace with actual task_id
-        save_notes(task_id, content)
+        save_notes(title, content, task_id)
         self.load_notes()
         self.clear_note_inputs()
 
@@ -70,7 +70,7 @@ class NotesApp:
         task_id = 1  # Example task_id, replace with actual task_id
         notes = fetch_notes(task_id)
         for note in notes:
-            self.note_listbox.insert(tk.END, f"{note[0]} | {note[2]}")  # Displaying id and content
+            self.note_listbox.insert(tk.END, f"{note[0]} | {note[1]}")  # Displaying id and title
 
     def show_note_details(self, event):
         selected_index = self.note_listbox.curselection()
@@ -113,12 +113,13 @@ class NotesApp:
 
         note = fetch_notes(note_id)  # This should be modified if `fetch_notes` does not return the note directly
         if note:
+            new_title = simpledialog.askstring("Edit Note", "Enter new note title:", initialvalue=note[1])
             new_content = simpledialog.askstring("Edit Note", "Enter new note content:", initialvalue=note[2])
-            if new_content:
+            if new_title and new_content:
                 update_note(note_id, new_content)
                 self.load_notes()
             else:
-                messagebox.showwarning("Input Error", "Note content cannot be empty")
+                messagebox.showwarning("Input Error", "Please fill in all fields")
 
     def delete_note(self):
         selected_index = self.note_listbox.curselection()
@@ -136,7 +137,10 @@ class NotesApp:
         delete_notes(note_id)
         self.load_notes()
 
-if __name__ == "__main__":
+def main():
     root = tk.Tk()
     app = NotesApp(root)
     root.mainloop()
+
+if __name__ == "__main__":
+    main()

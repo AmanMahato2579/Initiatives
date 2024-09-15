@@ -16,7 +16,7 @@ class TODOApp:
 
     def create_widgets(self):
         self.root.configure(bg="#f0f0f0")
-
+        
         # Main Layout Frame
         self.main_frame = tk.Frame(self.root, bg="#f0f0f0")
         self.main_frame.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
@@ -42,8 +42,7 @@ class TODOApp:
         self.notes_entry = tk.Entry(self.task_input_frame, width=40)
         self.notes_entry.grid(row=3, column=1, padx=5, pady=5)
 
-        # Correctly create the logo label
-        self.logo_label = tk.Label(self.task_input_frame, text="Initiatives: All Productive Apps in One Place",
+        self.logo_label = tk.Label(self.task_input_frame, text="Initiatives: TODO LIST",
             font=("Arial", 16, "bold"), bg="#ffffff", fg="#333333")
         self.logo_label.grid(row=5, column=0, columnspan=2, pady=10, sticky="e")
 
@@ -74,6 +73,7 @@ class TODOApp:
         tk.Button(self.button_frame, text="Mark as Missed", command=self.mark_as_missed, bg="#9C27B0", fg="white").pack(side=tk.LEFT, padx=7)
         tk.Button(self.button_frame, text="Add Again", command=self.add_again, bg="#FF9800", fg="white").pack(side=tk.LEFT, padx=7)
         tk.Button(self.button_frame, text="Clear Completed Tasks", command=self.clear_completed_tasks, bg="#607D8B", fg="white").pack(side=tk.LEFT, padx=7)
+        tk.Button(self.button_frame, text="Delete Task", command=self.delete_task, bg="#f44336", fg="white").pack(side=tk.LEFT, padx=7)
 
         # Right Side (Clock and Missed Tasks)
         self.right_frame = tk.Frame(self.root, bg="#f0f0f0", width=300)
@@ -128,10 +128,28 @@ class TODOApp:
         for task in missed_tasks:
             self.missed_tasks_listbox.insert(tk.END, f"{task[0]} | {task[1]} | {task[2]} | {task[3]}")
 
+    def delete_task(self):
+        selected_index = self.incomplete_tasks_listbox.curselection()
+        if not selected_index:
+            messagebox.showwarning("Select Task", "Please select a task to delete")
+            return
+
+        task_string = self.incomplete_tasks_listbox.get(selected_index)
+        task_id = self.get_task_id_from_string(task_string)
+
+        if not task_id:
+            messagebox.showerror("Error", "Task details not found")
+            return
+
+        if messagebox.askyesno("Confirm Delete", "Are you sure you want to delete this task?"):
+            delete_task(task_id)
+            self.load_tasks()
+
     def show_notes(self, event):
         selected_listbox = event.widget
         selection = selected_listbox.curselection()
         if not selection:
+            print("No selection made in the listbox.")
             return
 
         index = selection[0]
@@ -143,16 +161,19 @@ class TODOApp:
             return
 
         task = get_task_by_id(task_id)
-        if len(task) >= 4:
+        if task:
             task_details = f"Task Name: {task[0]}\nPriority: {task[1]}\nDeadline: {task[2]}\nNotes: {task[3]}"
+            messagebox.showinfo("Task Details", task_details)
         else:
             messagebox.showerror("Error", "Task details not found")
 
     def get_task_id_from_string(self, task_string):
-        # This function will extract task_id from the task_string
         parts = task_string.split(" | ")
         if len(parts) > 0:
-            return int(parts[0])
+            try:
+                return int(parts[0])
+            except ValueError:
+                return None
         return None
 
     def edit_task(self):
@@ -238,15 +259,20 @@ class TODOApp:
             messagebox.showerror("Error", "Task details not found")
 
     def clear_completed_tasks(self):
-        self.completed_tasks_listbox.delete(0, tk.END)
-        # Clear the database or any storage where completed tasks are kept if necessary
+        completed_tasks = get_completed_tasks()
+        for task in completed_tasks:
+            delete_task(task[0])
+        self.load_tasks()
 
     def update_clock(self):
         now = datetime.datetime.now().strftime("%H:%M:%S")
         self.clock_label.config(text=now)
         self.root.after(1000, self.update_clock)  # Update the clock every second
-
-if __name__ == "__main__":
+        
+def main():
     root = tk.Tk()
     app = TODOApp(root)
     root.mainloop()
+
+if __name__ == "__main__":
+    main()

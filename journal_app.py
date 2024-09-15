@@ -79,7 +79,10 @@ class JournalApp:
         details_window.title(f"Entry {entry_id}")
         
         tk.Label(details_window, text=f"Title: {entry[0]}").pack(pady=5)
-        tk.Text(details_window, width=50, height=10, wrap=tk.WORD).insert(tk.END, entry[1])
+        text_widget = tk.Text(details_window, width=50, height=10, wrap=tk.WORD)
+        text_widget.insert(tk.END, entry[1])
+        text_widget.pack(pady=5)
+        text_widget.config(state=tk.DISABLED)  # Make the text widget read-only
     
     def delete_entry(self):
         entry_id = simpledialog.askinteger("Delete Entry", "Enter the ID of the entry to delete:")
@@ -88,7 +91,10 @@ class JournalApp:
                 self.conn.execute('DELETE FROM journal WHERE id = ?', (entry_id,))
             messagebox.showinfo("Success", "Entry deleted successfully!")
 
-if __name__ == "__main__":
+def main():
     root = tk.Tk()
     app = JournalApp(root)
     root.mainloop()
+
+if __name__ == "__main__":
+    main()

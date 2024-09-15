@@ -104,37 +104,56 @@ def get_missed_tasks():
     return fetch_query(TASKS_DB_PATH, query)
 
 # Notes Management
+import sqlite3
+
 def create_notes_table():
-    """Create the notes table."""
-    query = """
+    """Create the notes table if it doesn't already exist."""
+    connection = sqlite3.connect('notes.db')
+    cursor = connection.cursor()
+    cursor.execute('''
     CREATE TABLE IF NOT EXISTS notes (
         id INTEGER PRIMARY KEY AUTOINCREMENT,
-        task_id INTEGER NOT NULL,
+        title TEXT NOT NULL,
         content TEXT NOT NULL,
-        FOREIGN KEY (task_id) REFERENCES tasks (id)
-    )
-    """
-    execute_query(NOTES_DB_PATH, query, commit=True)
+        task_id INTEGER NOT NULL,
+        created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+    )''')
+    connection.commit()
+    connection.close()
 
-def save_notes(task_id, content):
-    """Add notes for a specific task."""
-    query = 'INSERT INTO notes (task_id, content) VALUES (?, ?)'
-    execute_query(NOTES_DB_PATH, query, (task_id, content), commit=True)
+def save_notes(title, content, task_id):
+    """Save a new note to the database."""
+    connection = sqlite3.connect('notes.db')
+    cursor = connection.cursor()
+    cursor.execute('INSERT INTO notes (title, content, task_id) VALUES (?, ?, ?)', (title, content, task_id))
+    connection.commit()
+    connection.close()
 
-def fetch_notes(task_id):
-    """Retrieve notes for a specific task."""
-    query = 'SELECT * FROM notes WHERE task_id = ?'
-    return fetch_query(NOTES_DB_PATH, query, (task_id,))
-
-def delete_notes(note_id):
-    """Delete a note by ID."""
-    query = 'DELETE FROM notes WHERE id = ?'
-    execute_query(NOTES_DB_PATH, query, (note_id,), commit=True)
+def fetch_notes(task_id, sort_by='created_at'):
+    """Fetch notes for a specific task_id, sorted by the given column."""
+    connection = sqlite3.connect('notes.db')
+    cursor = connection.cursor()
+    query = f'SELECT id, title, content FROM notes WHERE task_id=? ORDER BY {sort_by}'
+    cursor.execute(query, (task_id,))
+    notes = cursor.fetchall()
+    connection.close()
+    return notes
 
 def update_note(note_id, new_content):
-    """Update a note by ID."""
-    query = 'UPDATE notes SET content = ? WHERE id = ?'
-    execute_query(NOTES_DB_PATH, query, (new_content, note_id), commit=True)
+    """Update the content of a note."""
+    connection = sqlite3.connect('notes.db')
+    cursor = connection.cursor()
+    cursor.execute('UPDATE notes SET content=? WHERE id=?', (new_content, note_id))
+    connection.commit()
+    connection.close()
+
+def delete_notes(note_id):
+    """Delete a note by its ID."""
+    connection = sqlite3.connect('notes.db')
+    cursor = connection.cursor()
+    cursor.execute('DELETE FROM notes WHERE id=?', (note_id,))
+    connection.commit()
+    connection.close()
 
 # Expense Tracking
 def create_expenses_table():

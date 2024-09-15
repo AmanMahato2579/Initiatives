@@ -170,8 +170,13 @@ class ExpenseApp:
             self.load_expenses()
             self.update_total_savings()
 
-if __name__ == "__main__":
+def main():
     root = tk.Tk()
     create_tables()
     app = ExpenseApp(root)
     root.mainloop()
+
+if __name__ == "__main__":
+    main()
+
+

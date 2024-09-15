@@ -170,7 +170,11 @@ class GoalTrackingApp:
         update_goal_status(goal_id, 1)  # 1 indicates completed status
         self.load_goals()
 
-if __name__ == "__main__":
+def main():
     root = tk.Tk()
     app = GoalTrackingApp(root)
     root.mainloop()
+
+
+if __name__ == "__main__":
+    main()
